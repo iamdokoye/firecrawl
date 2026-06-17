@@ -53,7 +53,7 @@ x-common-env: &common-env
   SEARXNG_ENGINES: ${SEARXNG_ENGINES}
   SEARXNG_CATEGORIES: ${SEARXNG_CATEGORIES}
   # Set NUQ_BACKEND=fdb to run the queue on FoundationDB instead of Postgres
-  NUQ_BACKEND: ${NUQ_BACKEND}
+  NUQ_BACKEND: ${NUQ_BACKEND:-pg}
   FDB_CLUSTER_FILE: ${NUQ_BACKEND:+/var/fdb/fdb.cluster}
 
 services:
