@@ -1,0 +1,82 @@
+name: Build ARM64 Docker Images
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - apps/api/**
+      - apps/playwright-service-ts/**
+      - apps/nuq-postgres/**
+      - .github/workflows/build-arm64.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-api:
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: apps/api
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/firecrawl:latest
+          platforms: linux/arm64
+          cache-from: type=gha,scope=api
+          cache-to: type=gha,mode=max,scope=api
+
+  build-playwright:
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: apps/playwright-service-ts
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/playwright-service:latest
+          platforms: linux/arm64
+          cache-from: type=gha,scope=playwright
+          cache-to: type=gha,mode=max,scope=playwright
+
+  build-nuq-postgres:
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: apps/nuq-postgres
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/nuq-postgres:latest
+          platforms: linux/arm64
+          cache-from: type=gha,scope=nuq-postgres
+          cache-to: type=gha,mode=max,scope=nuq-postgres
