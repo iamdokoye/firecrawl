@@ -70,6 +70,12 @@ services:
       MAX_CONCURRENT_PAGES: ${CRAWL_CONCURRENT_REQUESTS:-10}
     networks:
       - backend
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/localhost/3000' 2>/dev/null || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     # Resource limits for Docker Compose (not Swarm)
     cpus: 2.0
     mem_limit: 4G
@@ -96,11 +102,19 @@ services:
       ENV: local
     depends_on:
       redis:
-        condition: service_started
+        condition: service_healthy
       playwright-service:
-        condition: service_started
+        condition: service_healthy
       rabbitmq:
         condition: service_healthy
+      nuq-postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:${PORT:-3002}/e2e-test 2>/dev/null | grep -q OK || exit 1"]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
     ports:
       - "${PORT:-3002}:${INTERNAL_PORT:-3002}"
     volumes:
@@ -122,6 +136,12 @@ services:
     networks:
       - backend
     command: redis-server --bind 0.0.0.0
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     logging:
       driver: "json-file"
       options:
@@ -155,6 +175,12 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-postgres}
     networks:
       - backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
     logging:
       driver: "json-file"
       options:
@@ -175,6 +201,12 @@ services:
     volumes:
       - fdb-data:/var/fdb/data
       - fdb-cluster-file:/var/fdb
+    healthcheck:
+      test: ["CMD-SHELL", "fdbcli -C /var/fdb/fdb.cluster --exec 'status minimal' 2>&1 | grep -q 'available' || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 8
+      start_period: 30s
     logging:
       driver: "json-file"
       options:
@@ -186,7 +218,8 @@ services:
   foundationdb-init:
     image: foundationdb/foundationdb:7.3.63
     depends_on:
-      - foundationdb
+      foundationdb:
+        condition: service_healthy
     entrypoint:
       - /bin/bash
       - -c
